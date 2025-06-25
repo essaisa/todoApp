@@ -1,63 +1,52 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import API from "../utils/api";
 
-const Column = ({ title, headingColor, column, cards }) => {
-  return (
-    <div className="w-64 shrink-0 bg-stone-100 p-4 rounded shadow-md">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className={`font-semibold ${headingColor}`}>{title}</h3>
-        <span className="text-sm text-neutral-500">{cards.length}</span>
-      </div>
-      <div className="space-y-2">
-        {cards.map((card) => (
-          <div key={card._id} className="bg-white p-3 rounded shadow-sm">
-            <p className="font-medium">{card.text}</p>
-            <p className="text-xs text-gray-500">
-              {card.dueDate ? `Due: ${new Date(card.dueDate).toLocaleDateString()}` : ""}
-              {card.priority ? ` | Priority: ${card.priority}` : ""}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default function Kanban({ token }) {
+export const Kanban = ({ token, onLogout }) => {
   const [tasks, setTasks] = useState([]);
-
+  
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const res = await fetch("http://localhost:8080/tasks", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setTasks(data);
-      } catch (err) {
-        console.error("Error fetching tasks:", err);
-      }
-    };
-
-    fetchTasks();
+    API.get('/tasks')
+      .then(res => setTasks(res.data))
+      .catch(err => console.error(err));
   }, [token]);
 
   const columns = {
-    todo: tasks.filter((task) => task.status === "todo"),
-    doing: tasks.filter((task) => task.status === "doing"),
-    done: tasks.filter((task) => task.status === "completed" || task.status === "done"),
+    todo: tasks.filter(t => t.status === 'todo'),
+    completed: tasks.filter(t => t.status === 'completed'),
   };
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex-1 overflow-auto p-6">
-        <div className="flex gap-4 overflow-x-auto">
-          <Column title="To Do" headingColor="text-red-600" column="todo" cards={columns.todo} />
-          <Column title="In Progress" headingColor="text-blue-600" column="doing" cards={columns.doing} />
-          <Column title="Completed" headingColor="text-emerald-600" column="done" cards={columns.done} />
+      <div className="flex-grow p-6">
+        <header className="mb-4 flex justify-between items-center border-b pb-4">
+          <h1 className="text-3xl font-extrabold">Tasks</h1>
+          <button
+            onClick={onLogout}
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition"
+          >
+            Logout
+          </button>
+        </header>
+
+        <div className="flex gap-4 overflow-auto h-full">
+          {Object.entries(columns).map(([col, items]) => (
+            <div key={col} className="w-64 bg-gray-50 rounded p-2">
+              <h2 className="font-semibold mb-2 capitalize">{col}</h2>
+              {items.map(card => (
+                <div key={card._id} className="bg-white p-2 rounded shadow mb-2">
+                  <p className="font-medium">{card.text}</p>
+                  <small className="text-gray-500">
+                    {card.dueDate && `Due: ${new Date(card.dueDate).toLocaleDateString()}`}
+                    {card.priority && ` | ${card.priority}`}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
-}
+};
